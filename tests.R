@@ -6,6 +6,16 @@ performWhiteTest <- function(model, data) {
   # Ensure input types are correct
   assertthat::assert_that(is.list(model), is.data.frame(data))
   
+  # Documentation:
+  # This function performs the White test for heteroscedasticity on a linear model.
+  #
+  # Args:
+  #   model: An object of class 'lm', representing a fitted linear model.
+  #   data: A data frame used to fit the 'lm' model. It should include all variables used in the model.
+  #
+  # Returns:
+  #   A list containing the test statistic, its p-value, and degrees of freedom.
+  
   # Extract the model's formula to identify the dependent variable
   model_formula <- formula(model)
   dependent_var <- all.vars(model_formula)[1]
@@ -69,3 +79,36 @@ test_result_heteroscedastic <- performWhiteTest(model_heteroscedastic, mtcars)
 stopifnot(is.list(test_result_heteroscedastic))
 stopifnot(all(names(test_result_heteroscedastic) %in% c("test_statistic", "p_value", "degrees_of_freedom")))
 
+
+# Assuming alpha level of 0.05 for significance
+alpha <- 0.05
+
+# Check if the function correctly fails to reject homoscedasticity
+stopifnot(test_result_homoscedastic$p_value > alpha)
+
+# Check if the function correctly identifies heteroscedasticity
+stopifnot(test_result_heteroscedastic$p_value < alpha)
+
+
+# Breusch-Pagan test as a comparison
+bp_test_homoscedastic <- bptest(model_homoscedastic)
+bp_test_heteroscedastic <- bptest(model_heteroscedastic)
+
+# Compare p-values (roughly, since the tests are not identical)
+stopifnot(abs(test_result_homoscedastic$p_value - bp_test_homoscedastic$p.value) < 0.1)
+stopifnot(abs(test_result_heteroscedastic$p_value - bp_test_heteroscedastic$p.value) < 0.1)
+
+# Should throw an error if inputs are incorrect
+tryCatch({
+  performWhiteTest(data = mtcars, model = "not a model")
+  stop("Test failed: The function should have thrown an error with incorrect inputs.")
+}, error = function(e) {
+  print("Passed error handling test with incorrect model input.")
+})
+
+tryCatch({
+  performWhiteTest(model = model_homoscedastic, data = "not a data frame")
+  stop("Test failed: The function should have thrown an error with incorrect data input.")
+}, error = function(e) {
+  print("Passed error handling test with incorrect data input.")
+})
